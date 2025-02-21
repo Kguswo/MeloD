@@ -85,7 +85,7 @@ async def check_attendance(ctx):
         total_days = 1
 
     c.execute('''
-        INSERT INTO attendance (user_id, attend_date, streak, total_days)
+        INSERT INTO attendance (user_id, attendance_date, streak, total_days)
         VALUES (?, ?, ?, ?)
     ''', (user_id, today, streak, total_days))
 
@@ -112,10 +112,10 @@ async def attendance_info(ctx, member: discord.Member = None):
     
     # 최근 출석 정보 조회
     c.execute('''
-        SELECT streak, total_days, attend_date 
+        SELECT streak, total_days, attendance_date 
         FROM attendance 
         WHERE user_id = ? 
-        ORDER BY attend_date DESC 
+        ORDER BY attendance_date DESC 
         LIMIT 1
     ''', (user_id,))
     result = c.fetchone()
