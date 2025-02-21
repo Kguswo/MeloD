@@ -6,6 +6,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
@@ -196,4 +197,4 @@ pyrightconfig.json
 
 # OS 파일
 .DS_Store
-Thumbs.db
+*.db
