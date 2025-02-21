@@ -142,6 +142,45 @@ async def attendance_info(ctx, member: discord.Member = None):
     await ctx.send(embed=embed)
     conn.close()
 
+# 명령어
+@bot.command(name='도움말', aliases=['명령어'])
+async def help_command(ctx):
+    embed = discord.Embed(
+        title="🎵   MeloD 뮤직봇 도움말",
+        description="음악과 함께하는 즐거운 시간!",
+        color=discord.Color.blue()
+    )
+    
+    # 기본 명령어
+    basic = """
+    `/도움말` - 이 도움말을 표시합니다
+    `/help` - 상세 명령어 도움말을 표시합니다
+    `/핑` - 봇의 응답 시간을 체크합니다
+    `/출첵` - 출석 체크를 합니다.
+    """
+    embed.add_field(name="🤖  기본 명령어", value=basic, inline=False)
+    
+    # 음악 명령어
+    music = """
+    `/재생 [노래이름/URL]` - 음악을 재생합니다
+    `/일시정지` - 재생 중인 음악을 일시정지합니다
+    `/다시재생` - 일시정지된 음악을 다시 재생합니다
+    `/이전` - 이전 음악으로 돌아갑니다.
+    `/다음` - 다음 음악으로 넘어갑니다.
+    """
+    embed.add_field(name="🎵  음악 명령어", value=music, inline=False)
+    
+    # 재생목록 명령어
+    playlist = """
+    `/목록` - 현재 재생목록을 보여줍니다
+    `/나가` - 음성 채널에서 나갑니다
+    """
+    embed.add_field(name="📋  재생목록 관리", value=playlist, inline=False)
+    
+    embed.set_footer(text="자세한 명령어 사용법은 /help를 입력해주세요!")
+    
+    await ctx.send(embed=embed)
+
 # 봇 실행
 if __name__ == "__main__":
     bot.run(TOKEN)
