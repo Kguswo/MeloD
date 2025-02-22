@@ -1,9 +1,99 @@
 import discord
 from discord.ext import commands
+from discord import Embed, Color
 import os
 from dotenv import load_dotenv
 import sqlite3
 from datetime import datetime, timedelta
+
+# 음성 채널 관련
+class VoiceCommands(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    async def create_voice_embed(self, title: str, description: str, color: Color) -> Embed:
+        """음성 채널 관련 임베드 생성 헬퍼 함수"""
+        embed = Embed(title=title, description=description, color=color)
+        return embed
+    
+    @commands.command(name='입장', aliases=['음성채널 입장'])
+    async def join(self, ctx: commands.Context):
+        """음성 채널 입장 명령어"""
+        try:
+            # 사용자가 음성 채널에 없을때
+            if not ctx.author.voice:
+                embed = await self.create_voice_embed(
+                    "⚠️ 음성 채널 입장 실패",
+                    f"{ctx.author.mention}님, 먼저 음성 채널에 입장해주세요!",
+                    Color.red()
+                )
+                return await ctx.send(embed=embed)
+            
+            channel = ctx.author.voice.channel
+
+            # 봇이 이미 음성 채널에 있을때
+            if ctx.voice_client:
+                if ctx.voice_client.channel == channel:
+                    embed = await self.create_voice_embed(
+                        "ℹ️ 알림",
+                        f"멜로디가 이미 {channel.mention} 채널에 있습니다!",
+                        Color.blue()
+                    )
+                    return await ctx.send(embed=embed)
+                
+                # 다른 채널로 이동
+                await ctx.voice_client.move_to(channel)
+                embed = await self.create_voice_embed(
+                    "✅ 채널 이동 완료",
+                    f"{channel.mention} 채널로 이동했습니다!",
+                    Color.green()
+                )
+                await ctx.send(embed=embed)
+
+            # 새로운 채널 입장
+            await channel.connect()
+            embed = await self.create_voice_embed(
+                "✅ 채널 입장 완료",
+                f"{channel.mention} 채널에 입장했습니다!",
+                Color.green()
+            )
+            await ctx.send(embed=embed)
+
+        except Exception as e:
+            embed = await self.create_voice_embed(
+                "❌ 오류 발생",
+                f"채널 입장 중 오류가 발생했습니다: {str(e)}",
+                Color.red()
+            )
+            await ctx.send(embed=embed)
+
+    @commands.command(name='퇴장', aliases=['음성채널 퇴장'])
+    async def leave(self, ctx: commands.Context):
+        """음성 채널 퇴장 명령어"""
+        try:
+            if not ctx.voice_client:
+                embed = await self.create_voice_embed(
+                    "ℹ️ 알림",
+                    "음성 채널에 입장해있지 않습니다!",
+                    Color.blue()
+                )
+                return await ctx.send(embed=embed)
+
+            await ctx.voice_client.disconnect()
+            embed = await self.create_voice_embed(
+                "👋 채널 퇴장 완료",
+                "음성 채널에서 퇴장했습니다!",
+                Color.green()
+            )
+            await ctx.send(embed=embed)
+
+        except Exception as e:
+            embed = await self.create_voice_embed(
+                "❌ 오류 발생",
+                f"채널 퇴장 중 오류가 발생했습니다: {str(e)}",
+                Color.red()
+            )
+            await ctx.send(embed=embed)
 
 # 환경 변수 로드
 load_dotenv()
@@ -183,4 +273,5 @@ async def help_command(ctx):
 
 # 봇 실행
 if __name__ == "__main__":
+    bot.add_cog(VoiceCommands(bot))
     bot.run(TOKEN)
