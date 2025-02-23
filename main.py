@@ -217,8 +217,8 @@ def init_db():
             PRIMARY KEY (user_id, attendance_date)
         )
     ''')
-    conn.commit
-    conn.close
+    conn.commit()
+    conn.close()
 
 @bot.event
 async def on_ready():
