@@ -23,7 +23,7 @@ jobs:
 
     - name: Deploy to GCP
       run: |
-        rsync -avz --exclude=.env --exclude=attendance.db ./ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.TARGET_DIR }}
+        rsync -avz --exclude=.env --exclude=attendance.db --exclude=meloD_venv ./ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.TARGET_DIR }}
 
     - name: Restart meloD Service
       run: |
