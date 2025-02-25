@@ -13,6 +13,7 @@ class AttendanceCommands(commands.Cog):
         self.bot = bot
         self.db = bot.db
     
+    # 출석체크
     @app_commands.command(name='출첵', description="출석체크")
     async def check_attendance(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
@@ -58,6 +59,7 @@ class AttendanceCommands(commands.Cog):
             logger.error(f"출석체크 중 오류 발생: {e}")
             await interaction.response.send_message("출석체크 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", ephemeral=True)
 
+    # 출석 정보
     @app_commands.command(name="출석정보", description="출석 정보를 확인합니다")
     @app_commands.describe(member="확인할 멤버를 선택하세요 (선택사항)")
     async def attendance_info(self, interaction: discord.Interaction, member: discord.Member = None):
@@ -112,6 +114,7 @@ class AttendanceCommands(commands.Cog):
             logger.error(f"출석 정보 조회 중 오류 발생: {e}")
             await interaction.response.send_message("출석 정보 조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", ephemeral=True)
 
+    # 이번달 출석정보
     @app_commands.command(name="월간출석", description="이번 달 출석 현황을 확인합니다")
     async def monthly_attendance(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
@@ -179,6 +182,7 @@ class AttendanceCommands(commands.Cog):
             logger.error(f"월간 출석 현황 조회 중 오류 발생: {e}")
             await interaction.response.send_message("월간 출석 현황 조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", ephemeral=True)
             
+    # 출석 랭킹
     @app_commands.command(name="출석랭킹", description="서버 출석 랭킹을 확인합니다")
     async def attendance_ranking(self, interaction: discord.Interaction):
         try:
