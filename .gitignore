@@ -198,3 +198,6 @@ pyrightconfig.json
 # OS 파일
 .DS_Store
 *.db
+
+# DataGrip
+.idea/
