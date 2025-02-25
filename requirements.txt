@@ -2,3 +2,5 @@ discord.py>=2.0.0
 python-dotenv>=0.19.0
 yt-dlp>=2022.1.21
 pynacl>=1.4.0
+asyncpg==0.28.0
+pytz==2023.3
