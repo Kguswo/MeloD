@@ -21,10 +21,15 @@ services:
   bot:
     build: .
     depends_on:
-      - db
-    restart: always
+      db:
+        condition: service_healthy    restart: always
     env_file:
       - .env
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
 
 volumes:
   postgres_data:
