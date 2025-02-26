@@ -147,7 +147,6 @@ class AttendanceCommands(commands.Cog):
             
             # 1일이 무슨 요일인지 계산
             weekday_of_first = first_day.weekday()
-            weekday_of_first = (weekday_of_first + 1) % 7
 
             # 1일이 들어갈 위치 전까지 공백 채우기
             for i in range(weekday_of_first):
@@ -155,23 +154,6 @@ class AttendanceCommands(commands.Cog):
             
             # 날짜 채우기
             day = 1
-            # 첫 주 나머지 날짜 채우기
-            for i in range(weekday_of_first, 7):
-                date_str = f"{year}-{month:02d}-{day:02d}"
-                
-                if date_str in attendance_days:
-                    calendar_str += " X  "
-                else:
-                    # 한 자리 수는 오른쪽 정렬
-                    if day < 10:
-                        calendar_str += f"  {day} "
-                    else:
-                        calendar_str += f" {day} "
-                day += 1
-            
-            calendar_str += "\n"
-
-            # 나머지 주 채우기
             while day <= last_day.day:
                 # 한 주의 7일
                 for i in range(7):
