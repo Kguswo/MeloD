@@ -143,37 +143,48 @@ class AttendanceCommands(commands.Cog):
             calendar_str = f"📅 {year}년 {month}월 출석 현황\n\n"
 
             # 요일 헤더 (영문 약자 사용)
-            calendar_str += "  S   M   T   W   T   F   S\n"
+            calendar_str += "SUN  MON  TUE  WED  THU  FRI  SAT                          \n"
             
             # 1일이 무슨 요일인지 계산
             weekday_of_first = (first_day.weekday() + 1) % 7
 
             # 1일이 들어갈 위치 전까지 공백 채우기
+            line = ""
             for i in range(weekday_of_first):
-                calendar_str += "    "
+                line += "     "  # 5칸 공백 (각 날짜는 5칸 차지)
             
             # 날짜 채우기
             day = 1
+            current_day_of_week = weekday_of_first
+
             while day <= last_day.day:
-                # 한 주의 7일
-                for i in range(7):
-                    if day > last_day.day:
-                        break
-                        
-                    date_str = f"{year}-{month:02d}-{day:02d}"
-                    
-                    if date_str in attendance_days:
-                        calendar_str += " X  "
-                    else:
-                        # 한 자리 수는 오른쪽 정렬
-                        if day < 10:
-                            calendar_str += f"  {day} "
-                        else:
-                            calendar_str += f" {day} "
-                    day += 1
+                date_str = f"{year}-{month:02d}-{day:02d}"
                 
-                calendar_str += "\n"
+                # 날짜가 출석일인지 확인
+                if date_str in attendance_days:
+                    line += " X   "  # X 표시 (앞 1칸, 뒤 3칸)
+                else:
+                    # 숫자 표시 (한 자리는 앞 2칸, 뒤 2칸, 두 자리는 앞 1칸, 뒤 1칸)
+                    # 첫 번째 날(1일)은 특별하게 처리
+                    if day == 1:
+                        line += f"     1   "  # 앞에 공백 5칸
+                    elif day < 10:
+                        line += f"  {day}  "
+                    else:
+                        line += f" {day}  "
+                
+                day += 1
+                current_day_of_week += 1
+                
+                # 토요일이 끝나면 줄바꿈 (0부터 시작하므로 6이 토요일)
+                if current_day_of_week % 7 == 0:
+                    calendar_str += line + "\n"
+                    line = ""
             
+            # 마지막 주 출력 (줄바꿈이 안 된 경우)
+            if line:
+                calendar_str += line + "\n"
+
             embed = discord.Embed(
                 title=f"📊 {interaction.user.name}님의 {month}월 출석 현황",
                 description=f"```{calendar_str}```",
@@ -221,10 +232,10 @@ class AttendanceCommands(commands.Cog):
             if streak_ranks:
                 streak_txt = ""
                 for i, rank in enumerate(streak_ranks):
-                    user = self.bot.get_user(int(rank['user_id']))
-                    if user:
+                    try:
+                        user = await self.bot.fetch_user(int(rank['user_id']))
                         streak_txt += f"{i+1}. {user.name}: {rank['current_streak']}일\n"
-                    else:
+                    except discord.NotFound:
                         streak_txt += f"{i+1}. 알 수 없는 사용자: {rank['current_streak']}일\n"
                 
                 embed.add_field(
@@ -237,12 +248,12 @@ class AttendanceCommands(commands.Cog):
             if max_streak_ranks:
                 max_streak_txt = ""
                 for i, rank in enumerate(max_streak_ranks):
-                    user = self.bot.get_user(int(rank['user_id']))
-                    if user:
+                    try:
+                        user = await self.bot.fetch_user(int(rank['user_id']))
                         max_streak_txt += f"{i+1}. {user.name}: {rank['max_streak']}일\n"
-                    else:
+                    except discord.NotFound:
                         max_streak_txt += f"{i+1}. 알 수 없는 사용자: {rank['max_streak']}일\n"
-                
+    
                 embed.add_field(
                     name="🏅 최대 연속 출석 랭킹",
                     value=max_streak_txt,
@@ -253,10 +264,10 @@ class AttendanceCommands(commands.Cog):
             if total_ranks:
                 total_txt = ""
                 for i, rank in enumerate(total_ranks):
-                    user = self.bot.get_user(int(rank['user_id']))
-                    if user:
+                    try:
+                        user = await self.bot.fetch_user(int(rank['user_id']))
                         total_txt += f"{i+1}. {user.name}: {rank['total_days']}일\n"
-                    else:
+                    except discord.NotFound:
                         total_txt += f"{i+1}. 알 수 없는 사용자: {rank['total_days']}일\n"
                 
                 embed.add_field(
