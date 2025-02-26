@@ -27,4 +27,4 @@ jobs:
 
     - name: Restart meloD Service
       run: |
-        ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'sudo systemctl restart meloD'
+        ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'cd ${{ secrets.TARGET_DIR }} && docker-compose down && docker-compose up -d'
