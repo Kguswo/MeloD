@@ -141,41 +141,69 @@ class AttendanceCommands(commands.Cog):
             
             # 달력 형태로 출석 현황 표시
             calendar_str = f"📅 {year}년 {month}월 출석 현황\n\n"
-            calendar_str += "일 월 화 수 목 금 토\n"
+
+            # 요일 헤더 (영문 약자 사용)
+            calendar_str += "  S   M   T   W   T   F   S\n"
             
-            # 1일의 요일 계산 (0:월 ~ 6:일)
-            first_weekday = first_day.weekday()
-            # 파이썬은 월요일이 0이므로 일요일을 0으로 맞추기 위해 조정
-            first_weekday = (first_weekday + 1) % 7
+            # 1일이 무슨 요일인지 계산
+            weekday_of_first = first_day.weekday()
+            weekday_of_first = (weekday_of_first + 1) % 7
+
+            # 1일이 들어갈 위치 전까지 공백 채우기
+            for i in range(weekday_of_first):
+                calendar_str += "    "
             
-            # 달력 첫 줄 앞부분 공백 채우기
-            calendar_str += "   " * first_weekday
-            
-            for day in range(1, last_day.day + 1):
+            # 날짜 채우기
+            day = 1
+            # 첫 주 나머지 날짜 채우기
+            for i in range(weekday_of_first, 7):
                 date_str = f"{year}-{month:02d}-{day:02d}"
                 
-                # 출석한 날이면 ✓ 표시
                 if date_str in attendance_days:
-                    calendar_str += " ✓ "
+                    calendar_str += " X  "
                 else:
-                    calendar_str += f" {day:2d} "
+                    # 한 자리 수는 오른쪽 정렬
+                    if day < 10:
+                        calendar_str += f"  {day} "
+                    else:
+                        calendar_str += f" {day} "
+                day += 1
+            
+            calendar_str += "\n"
+
+            # 나머지 주 채우기
+            while day <= last_day.day:
+                # 한 주의 7일
+                for i in range(7):
+                    if day > last_day.day:
+                        break
+                        
+                    date_str = f"{year}-{month:02d}-{day:02d}"
+                    
+                    if date_str in attendance_days:
+                        calendar_str += " X  "
+                    else:
+                        # 한 자리 수는 오른쪽 정렬
+                        if day < 10:
+                            calendar_str += f"  {day} "
+                        else:
+                            calendar_str += f" {day} "
+                    day += 1
                 
-                # 토요일이면 줄바꿈
-                if (first_weekday + day) % 7 == 0:
-                    calendar_str += "\n"
+                calendar_str += "\n"
             
             embed = discord.Embed(
                 title=f"📊 {interaction.user.name}님의 {month}월 출석 현황",
                 description=f"```{calendar_str}```",
                 color=discord.Color.blue()
             )
-            
+        
             embed.add_field(
                 name="통계", 
                 value=f"이번 달 출석일: {len(attendance_days)}일 / {last_day.day}일", 
                 inline=False
             )
-            
+        
             await interaction.response.send_message(embed=embed)
             logger.info(f"사용자 {user_id}의 월간 출석 현황 조회 완료")
         except Exception as e:
