@@ -16,48 +16,54 @@ class AttendanceCommands(commands.Cog):
     # 출석체크
     @app_commands.command(name='출첵', description="출석체크")
     async def check_attendance(self, interaction: discord.Interaction):
-        user_id = str(interaction.user.id)
-        
-        # 한국 시간으로 설정
-        kst = pytz.timezone('Asia/Seoul')
-        today = datetime.now(kst).strftime('%Y-%m-%d')
-        
         try:
-            success, stats = await self.db.mark_attendance(user_id, today)
+            # 사용자 정보 가져오기
+            user_id = str(interaction.user.id)
+            user_name = interaction.user.name
+            display_name = interaction.user.display_name
             
-            if not success:
-                await interaction.response.send_message(f'{interaction.user.mention} 이미 오늘은 출석체크를 하셨어요!')
-                return
-            
+            # 한국 시간으로 설정
+            kst = pytz.timezone('Asia/Seoul')
+            today = datetime.now(kst).strftime('%Y-%m-%d')
+
+            # 출석 체크 시도
+            success, stats = await self.db.mark_attendance(user_id, user_name, display_name, today)
+        except Exception as e:
+            logger.error(f"출석 체크 오류: {e}")
+            await interaction.response.send_message("출석 체크 중 오류가 발생했습니다. 나중에 다시 시도해주세요.", ephemeral=True)
+            return
+        
+        if success:
+            # 출석 성공
             embed = discord.Embed(
-                title="✅ 출석체크 완료!",
-                description=f"{interaction.user.mention}님이 출석체크 하셨습니다!",
+                title="✅ 출석 체크 완료!",
+                description=f"{interaction.user.mention}님의 출석이 확인되었습니다.",
                 color=discord.Color.green()
             )
             
-            embed.add_field(
-                name="📊 출석 정보", 
-                value=f"🔥 연속 출석: {stats['current_streak']}일\n"
-                      f"🏆 최대 연속 출석: {stats['max_streak']}일\n"
-                      f"📅 총 출석: {stats['total_days']}일", 
-                inline=False
-            )
-            
-            # 서버 통계 추가
-            server_stats = await self.db.get_server_stats(interaction.guild.id)
-            if server_stats['today_attendance'] > 0:
-                embed.add_field(
-                    name="🌍 서버 통계",
-                    value=f"오늘 출석: {server_stats['today_attendance']}명\n"
-                          f"전체 등록: {server_stats['total_users']}명",
-                    inline=False
-                )
+            # 통계 정보 추가
+            embed.add_field(name="현재 연속 출석", value=f"{stats['current_streak']}일", inline=True)
+            embed.add_field(name="최대 연속 출석", value=f"{stats['max_streak']}일", inline=True)
+            embed.add_field(name="총 출석일", value=f"{stats['total_days']}일", inline=True)
             
             await interaction.response.send_message(embed=embed)
-            logger.info(f"사용자 {user_id} 출석체크 완료. 연속 출석: {stats['current_streak']}일")
-        except Exception as e:
-            logger.error(f"출석체크 중 오류 발생: {e}")
-            await interaction.response.send_message("출석체크 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", ephemeral=True)
+        else:
+            # 이미 출석한 경우
+            embed = discord.Embed(
+                title="⚠️ 이미 출석했습니다",
+                description=f"{interaction.user.mention}님은 오늘 이미 출석했습니다!",
+                color=discord.Color.yellow()
+            )
+            
+            # 사용자 통계 가져오기
+            user_stats = await self.db.get_user_stats(user_id)
+            
+            if user_stats:
+                embed.add_field(name="현재 연속 출석", value=f"{user_stats['current_streak']}일", inline=True)
+                embed.add_field(name="최대 연속 출석", value=f"{user_stats['max_streak']}일", inline=True)
+                embed.add_field(name="총 출석일", value=f"{user_stats['total_days']}일", inline=True)
+            
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
     # 출석 정보
     @app_commands.command(name="출석정보", description="출석 정보를 확인합니다")
@@ -76,7 +82,7 @@ class AttendanceCommands(commands.Cog):
                 return
             
             embed = discord.Embed(
-                title=f"📊 {member.name}님의 출석 정보",
+                title=f"📊 {stats.get('display_name') or member.name}님의 출석 정보",  # 수정: DB에 저장된 이름 사용 또는 fallback
                 color=discord.Color.blue()
             )
             
@@ -120,6 +126,11 @@ class AttendanceCommands(commands.Cog):
         user_id = str(interaction.user.id)
         
         try:
+            # DB에서 사용자 정보 가져오기
+            user_stats = await self.db.get_user_stats(user_id)
+            # 사용자 이름 설정 (DB에 있으면 그것 사용, 없으면 Discord 이름 사용)
+            user_name = user_stats.get('display_name') if user_stats else interaction.user.name
+            
             # 한국 시간으로 현재 연도와 월 가져오기
             kst = pytz.timezone('Asia/Seoul')
             now = datetime.now(kst)
@@ -155,7 +166,7 @@ class AttendanceCommands(commands.Cog):
             # 1일이 들어갈 위치 전까지 공백 채우기
             line = ""
             for i in range(weekday_of_first):
-                line += "    "  # 4칸 공백
+                line += "     "  
             
             # 날짜 채우기
             for day in range(1, last_day.day + 1):
@@ -163,9 +174,9 @@ class AttendanceCommands(commands.Cog):
                 
                 # 출석일 여부에 따라 다른 형식 사용
                 if date_str in attendance_days:
-                    line += f" X  " if day < 10 else f"X   "
+                    line += f" X   " if day < 10 else f" X   "
                 else:
-                    line += f" {day}  " if day < 10 else f"{day}  "
+                    line += f" {day}   " if day < 10 else f" {day}  "
                 
                 # 토요일(6)이 끝나면 줄바꿈
                 if (weekday_of_first + day) % 7 == 0:
@@ -179,7 +190,7 @@ class AttendanceCommands(commands.Cog):
             calendar_str += "-----------------------------------\n"
 
             embed = discord.Embed(
-                title=f"📊 {interaction.user.name}님의 {month}월 출석 현황",
+                title=f"📊 {user_name}님의 {month}월 출석 현황",
                 description=f"```{calendar_str}```",
                 color=discord.Color.blue()
             )
@@ -200,36 +211,30 @@ class AttendanceCommands(commands.Cog):
     @app_commands.command(name="출석랭킹", description="서버 출석 랭킹을 확인합니다")
     async def attendance_ranking(self, interaction: discord.Interaction):
         try:
-            async with self.db.pool.acquire() as conn:
-                # 연속 출석 랭킹
-                streak_ranks = await conn.fetch(
-                    'SELECT user_id, current_streak FROM user_stats ORDER BY current_streak DESC LIMIT 5'
-                )
-                
-                # 최대 연속 출석 랭킹
-                max_streak_ranks = await conn.fetch(
-                    'SELECT user_id, max_streak FROM user_stats ORDER BY max_streak DESC LIMIT 5'
-                )
-                
-                # 총 출석일 랭킹
-                total_ranks = await conn.fetch(
-                    'SELECT user_id, total_days FROM user_stats ORDER BY total_days DESC LIMIT 5'
-                )
-            
+            # 랭킹 데이터 가져오기 (DataBase 클래스의 get_rankings)
+            rankings = await self.db.get_rankings()
+
             embed = discord.Embed(
                 title=f"🏆 {interaction.guild.name} 출석 랭킹",
                 color=discord.Color.gold()
             )
-            
+
             # 연속 출석 랭킹
-            if streak_ranks:
+            if rankings['streak_ranks']:
                 streak_txt = ""
-                for i, rank in enumerate(streak_ranks):
-                    try:
-                        user = await self.bot.fetch_user(int(rank['user_id']))
-                        streak_txt += f"{i+1}. {user.name}: {rank['current_streak']}일\n"
-                    except discord.NotFound:
-                        streak_txt += f"{i+1}. 알 수 없는 사용자: {rank['current_streak']}일\n"
+                for i, rank in enumerate(rankings['streak_ranks']):
+                    # DB에 저장된 사용자 이름 사용
+                    display_name = rank['display_name'] or rank['user_name']
+                    
+                    # DB에 이름이 없는 경우에만 Discord API 호출
+                    if not display_name:
+                        try:
+                            user = await self.bot.fetch_user(int(rank['user_id']))
+                            display_name = user.name
+                        except discord.NotFound:
+                            display_name = f"알 수 없는 사용자"
+                    
+                    streak_txt += f"{i+1}. {display_name}: {rank['current_streak']}일\n"
                 
                 embed.add_field(
                     name="🔥 연속 출석 랭킹",
@@ -238,14 +243,21 @@ class AttendanceCommands(commands.Cog):
                 )
             
             # 최대 연속 출석 랭킹
-            if max_streak_ranks:
+            if rankings['max_streak_ranks']:
                 max_streak_txt = ""
-                for i, rank in enumerate(max_streak_ranks):
-                    try:
-                        user = await self.bot.fetch_user(int(rank['user_id']))
-                        max_streak_txt += f"{i+1}. {user.name}: {rank['max_streak']}일\n"
-                    except discord.NotFound:
-                        max_streak_txt += f"{i+1}. 알 수 없는 사용자: {rank['max_streak']}일\n"
+                for i, rank in enumerate(rankings['max_streak_ranks']):
+                    # DB에 저장된 사용자 이름 사용
+                    display_name = rank['display_name'] or rank['user_name']
+                    
+                    # DB에 이름이 없는 경우에만 Discord API 호출
+                    if not display_name:
+                        try:
+                            user = await self.bot.fetch_user(int(rank['user_id']))
+                            display_name = user.name
+                        except discord.NotFound:
+                            display_name = f"알 수 없는 사용자"
+                    
+                    max_streak_txt += f"{i+1}. {display_name}: {rank['max_streak']}일\n"
     
                 embed.add_field(
                     name="🏅 최대 연속 출석 랭킹",
@@ -254,14 +266,21 @@ class AttendanceCommands(commands.Cog):
                 )
             
             # 총 출석일 랭킹
-            if total_ranks:
+            if rankings['total_ranks']:
                 total_txt = ""
-                for i, rank in enumerate(total_ranks):
-                    try:
-                        user = await self.bot.fetch_user(int(rank['user_id']))
-                        total_txt += f"{i+1}. {user.name}: {rank['total_days']}일\n"
-                    except discord.NotFound:
-                        total_txt += f"{i+1}. 알 수 없는 사용자: {rank['total_days']}일\n"
+                for i, rank in enumerate(rankings['total_ranks']):
+                    # DB에 저장된 사용자 이름 사용
+                    display_name = rank['display_name'] or rank['user_name']
+                    
+                    # DB에 이름이 없는 경우에만 Discord API 호출
+                    if not display_name:
+                        try:
+                            user = await self.bot.fetch_user(int(rank['user_id']))
+                            display_name = user.name
+                        except discord.NotFound:
+                            display_name = f"알 수 없는 사용자"
+                    
+                    total_txt += f"{i+1}. {display_name}: {rank['total_days']}일\n"
                 
                 embed.add_field(
                     name="📅 총 출석일 랭킹",
