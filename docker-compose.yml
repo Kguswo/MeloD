@@ -22,7 +22,8 @@ services:
     build: .
     depends_on:
       db:
-        condition: service_healthy    restart: always
+        condition: service_healthy
+    restart: always
     env_file:
       - .env
     environment:
