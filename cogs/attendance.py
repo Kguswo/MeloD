@@ -146,7 +146,7 @@ class AttendanceCommands(commands.Cog):
             calendar_str += "  S   M   T   W   T   F   S\n"
             
             # 1일이 무슨 요일인지 계산
-            weekday_of_first = first_day.weekday()
+            weekday_of_first = (first_day.weekday() + 1) % 7
 
             # 1일이 들어갈 위치 전까지 공백 채우기
             for i in range(weekday_of_first):
