@@ -143,47 +143,40 @@ class AttendanceCommands(commands.Cog):
             calendar_str = f"📅 {year}년 {month}월 출석 현황\n\n"
 
             # 요일 헤더 (영문 약자 사용)
-            calendar_str += "SUN  MON  TUE  WED  THU  FRI  SAT                          \n"
+            calendar_str += " SUN  MON  TUE  WED  THU  FRI  SAT \n"
+            calendar_str += "-----------------------------------\n"
+
             
-            # 1일이 무슨 요일인지 계산
-            weekday_of_first = (first_day.weekday() + 1) % 7
+            # 1일이 무슨 요일인지 계산 (0: 월요일, 6: 일요일)
+            weekday_of_first = first_day.weekday()
+            # 일요일을 맨 앞으로 조정 (파이썬은 월요일이 0, 일요일이 6)
+            weekday_of_first = (weekday_of_first + 1) % 7
 
             # 1일이 들어갈 위치 전까지 공백 채우기
             line = ""
             for i in range(weekday_of_first):
-                line += "     "  # 5칸 공백 (각 날짜는 5칸 차지)
+                line += "    "  # 4칸 공백
             
             # 날짜 채우기
-            day = 1
-            current_day_of_week = weekday_of_first
-
-            while day <= last_day.day:
+            for day in range(1, last_day.day + 1):
                 date_str = f"{year}-{month:02d}-{day:02d}"
                 
-                # 날짜가 출석일인지 확인
+                # 출석일 여부에 따라 다른 형식 사용
                 if date_str in attendance_days:
-                    line += " X   "  # X 표시 (앞 1칸, 뒤 3칸)
+                    line += f" X  " if day < 10 else f"X   "
                 else:
-                    # 숫자 표시 (한 자리는 앞 2칸, 뒤 2칸, 두 자리는 앞 1칸, 뒤 1칸)
-                    # 첫 번째 날(1일)은 특별하게 처리
-                    if day == 1:
-                        line += f"     1   "  # 앞에 공백 5칸
-                    elif day < 10:
-                        line += f"  {day}  "
-                    else:
-                        line += f" {day}  "
+                    line += f" {day}  " if day < 10 else f"{day}  "
                 
-                day += 1
-                current_day_of_week += 1
-                
-                # 토요일이 끝나면 줄바꿈 (0부터 시작하므로 6이 토요일)
-                if current_day_of_week % 7 == 0:
+                # 토요일(6)이 끝나면 줄바꿈
+                if (weekday_of_first + day) % 7 == 0:
                     calendar_str += line + "\n"
                     line = ""
             
             # 마지막 주 출력 (줄바꿈이 안 된 경우)
             if line:
                 calendar_str += line + "\n"
+
+            calendar_str += "-----------------------------------\n"
 
             embed = discord.Embed(
                 title=f"📊 {interaction.user.name}님의 {month}월 출석 현황",
